@@ -1,0 +1,306 @@
+/* Reset e configurações gerais */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(45deg, #1e3c72, #2a5298);
+    color: white;
+    overflow: hidden;
+    user-select: none;
+}
+
+.game-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header do jogo */
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.7);
+    border-bottom: 2px solid #ffd700;
+}
+
+.player-info, .enemy-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.player-name {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.elixir-bar {
+    position: relative;
+    width: 100px;
+    height: 20px;
+    background: #333;
+    border-radius: 10px;
+    border: 2px solid #9b59b6;
+    overflow: hidden;
+}
+
+.elixir-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #9b59b6, #e74c3c);
+    border-radius: 8px;
+    transition: width 0.3s ease;
+    width: 100%;
+}
+
+.elixir-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px black;
+}
+
+.game-timer {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 2px 2px 4px black;
+}
+
+/* Campo de batalha */
+.battlefield-container {
+    flex: 1;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle, #2c3e50, #34495e);
+}
+
+#battlefield {
+    border: 3px solid #ffd700;
+    border-radius: 10px;
+    background: #27ae60;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    cursor: crosshair;
+}
+
+/* Overlay das torres */
+.towers-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px;
+}
+
+.enemy-towers, .player-towers {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    height: 100px;
+}
+
+.tower {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid #ffd700;
+    background: radial-gradient(circle, #e74c3c, #c0392b);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+    transition: all 0.3s ease;
+}
+
+.king-tower {
+    background: radial-gradient(circle, #f39c12, #e67e22) !important;
+    width: 100px !important;
+    height: 100px !important;
+}
+
+.princess-tower.left {
+    left: -150px;
+}
+
+.princess-tower.right {
+    right: -150px;
+}
+
+.tower-hp {
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    text-shadow: 1px 1px 2px black;
+}
+
+.tower.destroyed {
+    background: #7f8c8d !important;
+    border-color: #95a5a6 !important;
+    box-shadow: none !important;
+    opacity: 0.5;
+}
+
+/* Deck de cartas */
+.player-deck {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.8);
+    border-top: 2px solid #ffd700;
+}
+
+/* Cartas */
+card {
+    display: block;
+    width: 80px;
+    height: 110px;
+    background: linear-gradient(145deg, #3498db, #2980b9);
+    border: 2px solid #ffd700;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+card:hover {
+    transform: translateY(-10px) scale(1.05);
+    box-shadow: 0 10px 20px rgba(255, 215, 0, 0.5);
+}
+
+card.selected {
+    transform: translateY(-15px) scale(1.1);
+    box-shadow: 0 15px 30px rgba(255, 215, 0, 0.8);
+    border-color: #e74c3c;
+}
+
+card.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(100%);
+}
+
+card.disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.card-cost {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 20px;
+    height: 20px;
+    background: #9b59b6;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    border: 1px solid white;
+}
+
+.card-icon {
+    font-size: 30px;
+    text-align: center;
+    margin-top: 25px;
+    text-shadow: 2px 2px 4px black;
+}
+
+.card-name {
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: bold;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 2px 5px;
+    border-radius: 5px;
+    white-space: nowrap;
+}
+
+/* Mensagens do jogo */
+.game-messages {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: #ffd700;
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid #ffd700;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    display: none;
+    z-index: 1000;
+}
+
+.game-messages.show {
+    display: block;
+    animation: fadeInOut 2s ease;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .game-header {
+        padding: 5px 10px;
+    }
+    
+    .player-name {
+        font-size: 12px;
+    }
+    
+    .elixir-bar {
+        width: 80px;
+        height: 16px;
+    }
+    
+    .game-timer {
+        font-size: 20px;
+    }
+    
+    #battlefield {
+        width: 95vw;
+        height: calc(95vw * 1.5);
+    }
+    
+    card {
+        width: 60px;
+        height: 85px;
+    }
+    
+    .card-icon {
+        font-size: 24px;
+        margin-top: 20px;
+    }
+}

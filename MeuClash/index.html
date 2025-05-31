@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Clash Royale</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Header com informações do jogo -->
+        <div class="game-header">
+            <div class="player-info">
+                <div class="player-name">Você</div>
+                <div class="elixir-bar">
+                    <div class="elixir-fill" id="playerElixir"></div>
+                    <span class="elixir-text" id="playerElixirText">10/10</span>
+                </div>
+            </div>
+            
+            <div class="game-timer">
+                <span id="gameTimer">3:00</span>
+            </div>
+            
+            <div class="enemy-info">
+                <div class="player-name">IA Malvada</div>
+                <div class="elixir-bar">
+                    <div class="elixir-fill" id="enemyElixir"></div>
+                    <span class="elixir-text" id="enemyElixirText">10/10</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Campo de batalha -->
+        <div class="battlefield-container">
+            <canvas id="battlefield" width="800" height="1200"></canvas>
+            
+            <!-- Overlay para torres -->
+            <div class="towers-overlay">
+                <div class="enemy-towers">
+                    <div class="tower king-tower" id="enemyKingTower">
+                        <div class="tower-hp">🏰 2000</div>
+                    </div>
+                    <div class="tower princess-tower left" id="enemyLeftTower">
+                        <div class="tower-hp">🗼 1000</div>
+                    </div>
+                    <div class="tower princess-tower right" id="enemyRightTower">
+                        <div class="tower-hp">🗼 1000</div>
+                    </div>
+                </div>
+                
+                <div class="player-towers">
+                    <div class="tower princess-tower left" id="playerLeftTower">
+                        <div class="tower-hp">🗼 1000</div>
+                    </div>
+                    <div class="tower princess-tower right" id="playerRightTower">
+                        <div class="tower-hp">🗼 1000</div>
+                    </div>
+                    <div class="tower king-tower" id="playerKingTower">
+                        <div class="tower-hp">🏰 2000</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deck de cartas do jogador -->
+        <div class="player-deck">
+            <card class="card" data-type="knight" data-cost="3">
+                <div class="card-cost">3</div>
+                <div class="card-icon">⚔️</div>
+                <div class="card-name">Cavaleiro</div>
+            </card>
+            
+            <card class="card" data-type="archer" data-cost="3">
+                <div class="card-cost">3</div>
+                <div class="card-icon">🏹</div>
+                <div class="card-name">Arqueira</div>
+            </card>
+            
+            <card class="card" data-type="giant" data-cost="5">
+                <div class="card-cost">5</div>
+                <div class="card-icon">👹</div>
+                <div class="card-name">Gigante</div>
+            </card>
+            
+            <card class="card" data-type="fireball" data-cost="4">
+                <div class="card-cost">4</div>
+                <div class="card-icon">🔥</div>
+                <div class="card-name">Bola de Fogo</div>
+            </card>
+            
+            <card class="card" data-type="minions" data-cost="3">
+                <div class="card-cost">3</div>
+                <div class="card-icon">🦇</div>
+                <div class="card-name">Lacaios</div>
+            </card>
+        </div>
+
+        <!-- Mensagens do jogo -->
+        <div class="game-messages" id="gameMessages"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="cards.js"></script>
+    <script src="battlefield.js"></script>
+    <script src="ai.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
