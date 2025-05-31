@@ -102,11 +102,13 @@ class AI {
             elixirAdvantage: this.elixir >= 5,
             towerThreat: this.getTowerThreat(playerUnits)
         };
-    }
-
-    isUnderAttack(playerUnits) {
-        // Verifica se há unidades do jogador na metade superior do campo
-        return playerUnits.some(unit => unit.y < game.battlefield.height / 2);
+    }    isUnderAttack(playerUnits) {
+        // Verifica se há unidades do jogador na metade superior do campo (área da IA)
+        const halfwayRow = game.battlefield.gridRows / 2;
+        return playerUnits.some(unit => {
+            const gridPos = game.battlefield.canvasToGrid(unit.x, unit.y);
+            return gridPos.row < halfwayRow;
+        });
     }
 
     canCounterAttack() {
@@ -185,15 +187,12 @@ class AI {
             x: position.x,
             y: position.y
         };
-    }
-
-    getDefensivePosition(playerUnits) {
+    }    getDefensivePosition(playerUnits) {
         if (playerUnits.length === 0) {
-            // Posição padrão na frente das torres
-            return {
-                x: 300 + Math.random() * 200,
-                y: 200 + Math.random() * 100
-            };
+            // Posição padrão na frente das torres (área defensiva da IA)
+            const gridCol = Math.floor(Math.random() * 8) + 5; // Colunas centrais
+            const gridRow = Math.floor(Math.random() * 4) + 2; // Linhas defensivas (2-5)
+            return game.battlefield.gridToCanvas(gridCol, gridRow);
         }
         
         // Posicionar perto da unidade mais avançada
@@ -201,10 +200,13 @@ class AI {
             unit.y < closest.y ? unit : closest
         );
         
-        return {
-            x: mostAdvanced.x + (Math.random() - 0.5) * 100,
-            y: Math.max(100, mostAdvanced.y - 50)
-        };
+        // Converter para grid e ajustar posição defensiva
+        const gridPos = game.battlefield.canvasToGrid(mostAdvanced.x, mostAdvanced.y);
+        const defensiveRow = Math.max(0, gridPos.row - 2);
+        const defensiveCol = Math.max(0, Math.min(game.battlefield.gridCols - 1, 
+            gridPos.col + Math.floor((Math.random() - 0.5) * 4)));
+        
+        return game.battlefield.gridToCanvas(defensiveCol, defensiveRow);
     }
 
     planAttack(gameState) {
@@ -225,21 +227,23 @@ class AI {
             x: position.x,
             y: position.y
         };
-    }
-
-    getAttackPosition() {
-        // Escolher lane aleatoriamente (esquerda ou direita)
+    }    getAttackPosition() {
+        // Escolher lane baseada no grid system (lanes esquerda e direita)
+        // Posicionar na área da IA (parte superior do campo)
         const lanes = [
-            { x: 200, y: 300 }, // Lane esquerda
-            { x: 600, y: 300 }  // Lane direita
+            { col: 4, row: 6 },   // Lane esquerda (mais na frente)
+            { col: 13, row: 6 }   // Lane direita (mais na frente)
         ];
         
         const lane = lanes[Math.floor(Math.random() * lanes.length)];
         
-        return {
-            x: lane.x + (Math.random() - 0.5) * 80,
-            y: lane.y + (Math.random() - 0.5) * 80
-        };
+        // Adicionar variação na posição, mas manter na área da IA
+        const finalCol = Math.max(0, Math.min(game.battlefield.gridCols - 1, 
+            lane.col + Math.floor((Math.random() - 0.5) * 3)));
+        const finalRow = Math.max(2, Math.min(10, // Manter na metade superior
+            lane.row + Math.floor((Math.random() - 0.5) * 2)));
+        
+        return game.battlefield.gridToCanvas(finalCol, finalRow);
     }
 
     useSpell(gameState) {
@@ -263,9 +267,7 @@ class AI {
             x: bestCluster.center.x,
             y: bestCluster.center.y
         };
-    }
-
-    randomAction() {
+    }    randomAction() {
         // Ação aleatória quando não há estratégia específica
         const availableCards = this.deck.filter(card => this.elixir >= card.cost);
         if (availableCards.length === 0) return null;
@@ -273,18 +275,28 @@ class AI {
         const card = availableCards[Math.floor(Math.random() * availableCards.length)];
         
         if (card.type === 'fireball') {
+            // Usar spell em posição aleatória na área do jogador
+            const gridCol = Math.floor(Math.random() * game.battlefield.gridCols);
+            const gridRow = Math.floor(Math.random() * 8) + 10; // Área do jogador
+            const pos = game.battlefield.gridToCanvas(gridCol, gridRow);
+            
             return {
                 type: 'cast_spell',
                 card,
-                x: 300 + Math.random() * 200,
-                y: 600 + Math.random() * 200
+                x: pos.x,
+                y: pos.y
             };
         } else {
+            // Colocar unidade em posição aleatória na área da IA
+            const gridCol = Math.floor(Math.random() * game.battlefield.gridCols);
+            const gridRow = Math.floor(Math.random() * 8) + 2; // Área da IA
+            const pos = game.battlefield.gridToCanvas(gridCol, gridRow);
+            
             return {
                 type: 'place_unit',
                 card,
-                x: 200 + Math.random() * 400,
-                y: 200 + Math.random() * 200
+                x: pos.x,
+                y: pos.y
             };
         }
     }

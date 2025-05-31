@@ -22,31 +22,59 @@ class Game {
         this.spells = [];
         this.effects = [];
         this.towers = this.initializeTowers();
-        
-        // UI
+          // UI
         this.setupUI();
         this.updateElixirUI();
-        this.updateTowerUI();
-        
-        // Iniciar loops do jogo
+          // Iniciar loops do jogo
         this.startGameLoop();
         this.battlefield.startRenderLoop();
         
+        // Atualizar posições das torres baseadas no grid
+        this.updateTowerPositions();
+        
         console.log('🎮 Meu Clash Royale iniciado! Boa sorte, comandante!');
-    }
+    }    initializeTowers() {
+        // Aguardar o battlefield estar pronto para obter posições do grid
+        const getTowerPosition = (col, row) => {
+            if (this.battlefield) {
+                return this.battlefield.getGridPosition(col, row);
+            }
+            // Fallback para posições fixas se o battlefield não estiver pronto
+            return { x: 400, y: 300 };
+        };
 
-    initializeTowers() {
         return {
-            // Torres do jogador
-            playerLeft: new Tower(200, this.canvas.height - 100, 1000, 'player', 'princess'),
-            playerRight: new Tower(600, this.canvas.height - 100, 1000, 'player', 'princess'),
-            playerKing: new Tower(400, this.canvas.height - 50, 2000, 'player', 'king'),
+            // Torres do jogador (posições serão atualizadas quando o battlefield estiver pronto)
+            playerLeft: new Tower(200, 600, 1000, 'player', 'princess'),
+            playerRight: new Tower(600, 600, 1000, 'player', 'princess'),
+            playerKing: new Tower(400, 650, 2000, 'player', 'king'),
             
             // Torres inimigas
             enemyLeft: new Tower(200, 100, 1000, 'enemy', 'princess'),
             enemyRight: new Tower(600, 100, 1000, 'enemy', 'princess'),
             enemyKing: new Tower(400, 50, 2000, 'enemy', 'king')
         };
+    }
+
+    updateTowerPositions() {
+        if (!this.battlefield) return;
+        
+        // Atualizar posições das torres baseadas no grid
+        const positions = {
+            enemyKing: this.battlefield.getGridPosition(this.battlefield.gridCols / 2, 1),
+            enemyLeft: this.battlefield.getGridPosition(this.battlefield.gridCols / 4, 3),
+            enemyRight: this.battlefield.getGridPosition((this.battlefield.gridCols * 3) / 4, 3),
+            playerLeft: this.battlefield.getGridPosition(this.battlefield.gridCols / 4, this.battlefield.gridRows - 3),
+            playerRight: this.battlefield.getGridPosition((this.battlefield.gridCols * 3) / 4, this.battlefield.gridRows - 3),
+            playerKing: this.battlefield.getGridPosition(this.battlefield.gridCols / 2, this.battlefield.gridRows - 1)
+        };
+        
+        Object.keys(positions).forEach(key => {
+            if (this.towers[key]) {
+                this.towers[key].x = positions[key].x;
+                this.towers[key].y = positions[key].y;
+            }
+        });
     }
 
     setupUI() {
@@ -88,12 +116,14 @@ class Game {
 
     handleCanvasClick(x, y) {
         if (!this.selectedCard) return;
-        
-        // Verificar se é uma posição válida (metade inferior do campo)
+          // Verificar se é uma posição válida (metade inferior do campo)
         if (!this.battlefield.isValidPlacement(x, y)) {
             this.showMessage('Você só pode colocar unidades na sua área! 🚫');
             return;
         }
+        
+        // Ajustar posição para o grid
+        const gridPosition = this.battlefield.snapToGrid(x, y);
         
         const card = CARDS[this.selectedCard];
         const cost = card.cost;
@@ -110,17 +140,17 @@ class Game {
         
         // Criar unidade ou spell
         if (card.type === 'fireball') {
-            this.castSpell(card, x, y);
+            this.castSpell(card, gridPosition.x, gridPosition.y);
         } else {
-            this.spawnUnit(card, x, y, 'player');
+            this.spawnUnit(card, gridPosition.x, gridPosition.y, 'player');
         }
         
         // Notificar IA sobre a ação do jogador
         this.ai.reactToEvent(card.type === 'fireball' ? 'spell_cast' : 'unit_spawned', {
             player: 'player',
             card: card,
-            x: x,
-            y: y
+            x: gridPosition.x,
+            y: gridPosition.y
         });
         
         // Deselecionar carta
@@ -225,36 +255,10 @@ class Game {
             enemyElixirFill.style.width = percentage + '%';
             enemyElixirText.textContent = `${this.ai.elixir}/${this.ai.maxElixir}`;
         }
-    }
-
-    updateTowerUI() {
-        // Atualizar HP das torres
-        const towerElements = {
-            playerLeft: document.getElementById('playerLeftTower'),
-            playerRight: document.getElementById('playerRightTower'),
-            playerKing: document.getElementById('playerKingTower'),
-            enemyLeft: document.getElementById('enemyLeftTower'),
-            enemyRight: document.getElementById('enemyRightTower'),
-            enemyKing: document.getElementById('enemyKingTower')
-        };
-        
-        Object.keys(towerElements).forEach(key => {
-            const tower = this.towers[key];
-            const element = towerElements[key];
-            
-            if (tower && element) {
-                const hpElement = element.querySelector('.tower-hp');
-                if (hpElement) {
-                    const icon = tower.type === 'king' ? '🏰' : '🗼';
-                    hpElement.textContent = `${icon} ${tower.hp}`;
-                    
-                    // Marcar torre como destruída
-                    if (tower.hp <= 0) {
-                        element.classList.add('destroyed');
-                    }
-                }
-            }
-        });
+    }    updateTowerUI() {
+        // As torres agora são desenhadas diretamente no canvas
+        // Esta função é mantida para compatibilidade com outras partes do código
+        // que podem chamar game.updateTowerUI()
     }
 
     updateCardStates() {
@@ -417,11 +421,12 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
         }
     });
-    
-    console.log('🚀 Controles:');
+      console.log('🚀 Controles:');
     console.log('• Clique nas cartas para selecioná-las');
     console.log('• Clique no campo para colocar unidades/spells');
     console.log('• Teclas 1-5 para selecionar cartas rapidamente');
     console.log('• Espaço para pausar/despausar');
     console.log('• ESC para deselecionar carta');
+    console.log('• D para mostrar/ocultar grid de debug');
+    console.log('• T para testar sistema de caminhos');
 });

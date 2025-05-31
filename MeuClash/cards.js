@@ -46,9 +46,7 @@ class Unit {
             case 'minions': return 8;
             default: return 12;
         }
-    }
-
-    update(deltaTime, units, towers) {
+    }    update(deltaTime, units, towers) {
         if (this.hp <= 0) return false;
 
         // Encontrar alvo mais próximo
@@ -65,12 +63,70 @@ class Unit {
                 this.moveTowards(this.target, deltaTime);
             }
         } else {
-            // Mover em direção à base inimiga
-            const targetY = this.player === 'player' ? 100 : 500;
-            this.moveTowards({x: 400, y: targetY}, deltaTime);
+            // Mover seguindo o caminho mais próximo
+            this.followPath(deltaTime);
         }
 
         return true;
+    }    followPath(deltaTime) {
+        // Obter o caminho mais próximo do battlefield
+        if (game.battlefield) {
+            const path = game.battlefield.getNearestPath(this.x, this.y);
+            
+            if (path && path.length > 0) {
+                // Para unidades inimigas, seguir do início para o fim do caminho
+                // Para unidades do jogador, seguir do fim para o início
+                let targetPoint = null;
+                
+                if (this.player === 'enemy') {
+                    // Unidades inimigas: encontrar o próximo ponto à frente no caminho
+                    for (let i = 0; i < path.length; i++) {
+                        const point = path[i];
+                        const distanceToPoint = this.getDistanceTo(point);
+                        
+                        // Se está próximo o suficiente de um ponto, ir para o próximo
+                        if (distanceToPoint < 30 && i < path.length - 1) {
+                            targetPoint = path[i + 1];
+                            break;
+                        } else if (distanceToPoint >= 30) {
+                            targetPoint = point;
+                            break;
+                        }
+                    }
+                    
+                    // Se não encontrou um ponto ou chegou ao final, ir para o último ponto
+                    if (!targetPoint) {
+                        targetPoint = path[path.length - 1];
+                    }
+                } else {
+                    // Unidades do jogador: seguir caminho invertido (do fim para o início)
+                    for (let i = path.length - 1; i >= 0; i--) {
+                        const point = path[i];
+                        const distanceToPoint = this.getDistanceTo(point);
+                        
+                        if (distanceToPoint < 30 && i > 0) {
+                            targetPoint = path[i - 1];
+                            break;
+                        } else if (distanceToPoint >= 30) {
+                            targetPoint = point;
+                            break;
+                        }
+                    }
+                    
+                    if (!targetPoint) {
+                        targetPoint = path[0];
+                    }
+                }
+                
+                if (targetPoint) {
+                    this.moveTowards(targetPoint, deltaTime);
+                }
+            }
+        } else {
+            // Fallback para movimento básico se o battlefield não estiver disponível
+            const targetY = this.player === 'player' ? 100 : 500;
+            this.moveTowards({x: 400, y: targetY}, deltaTime);
+        }
     }
 
     findTarget(units, towers) {
@@ -158,9 +214,7 @@ class Unit {
             value: damage,
             duration: 1000
         });
-    }
-
-    draw(ctx) {
+    }    draw(ctx) {
         // Desenhar a unidade
         ctx.fillStyle = this.color;
         ctx.beginPath();
@@ -190,26 +244,59 @@ class Unit {
                 ctx.fill();
         }
 
-        // Desenhar barra de vida se não estiver com vida cheia
-        if (this.hp < this.maxHp) {
-            const barWidth = this.size * 2;
-            const barHeight = 4;
-            const hpPercent = this.hp / this.maxHp;
+        // Borda da unidade
+        ctx.strokeStyle = this.player === 'player' ? '#3498db' : '#e74c3c';
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
-            // Fundo da barra
-            ctx.fillStyle = '#333';
-            ctx.fillRect(this.x - barWidth/2, this.y - this.size - 10, barWidth, barHeight);
-
-            // Barra de vida
-            ctx.fillStyle = hpPercent > 0.5 ? '#27ae60' : hpPercent > 0.25 ? '#f39c12' : '#e74c3c';
-            ctx.fillRect(this.x - barWidth/2, this.y - this.size - 10, barWidth * hpPercent, barHeight);
-        }
+        // Desenhar barra de vida sempre visível
+        this.drawHealthBar(ctx);
 
         // Desenhar ícone da carta
         ctx.fillStyle = 'white';
-        ctx.font = `${this.size}px Arial`;
+        ctx.font = `${Math.max(12, this.size * 0.8)}px Arial`;
         ctx.textAlign = 'center';
-        ctx.fillText(this.card.icon, this.x, this.y + this.size/3);
+        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+        ctx.strokeText(this.card.icon, this.x, this.y);
+        ctx.fillText(this.card.icon, this.x, this.y);
+        
+        // Mostrar valor de vida em pequeno texto
+        if (game.battlefield && game.battlefield.debugMode) {
+            ctx.fillStyle = 'white';
+            ctx.font = '10px Arial';
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            const healthText = `${this.hp}/${this.maxHp}`;
+            ctx.strokeText(healthText, this.x, this.y + this.size + 15);
+            ctx.fillText(healthText, this.x, this.y + this.size + 15);
+        }
+    }
+
+    drawHealthBar(ctx) {
+        const barWidth = this.size * 2.5;
+        const barHeight = 6;
+        const hpPercent = this.hp / this.maxHp;
+        const barY = this.y - this.size - 12;
+
+        // Fundo da barra
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
+
+        // Barra de vida
+        let healthColor;
+        if (hpPercent > 0.6) healthColor = '#2ecc71';
+        else if (hpPercent > 0.3) healthColor = '#f39c12';
+        else healthColor = '#e74c3c';
+        
+        ctx.fillStyle = healthColor;
+        ctx.fillRect(this.x - barWidth/2, barY, barWidth * hpPercent, barHeight);
+
+        // Borda da barra
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
     }
 }
 
