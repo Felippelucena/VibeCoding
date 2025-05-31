@@ -189,9 +189,10 @@ class AI {
         };
     }    getDefensivePosition(playerUnits) {
         if (playerUnits.length === 0) {
-            // Posição padrão na frente das torres (área defensiva da IA)
-            const gridCol = Math.floor(Math.random() * 8) + 5; // Colunas centrais
-            const gridRow = Math.floor(Math.random() * 4) + 2; // Linhas defensivas (2-5)
+            // Posição padrão na frente das torres (área defensiva da IA) - simétrica
+            const gridCol = Math.floor(Math.random() * (game.battlefield.gridCols - 2)) + 1; // Toda largura
+            const maxDefensiveRow = Math.floor(game.battlefield.gridRows / 2) - 2; // Área da IA
+            const gridRow = Math.floor(Math.random() * (maxDefensiveRow - 2)) + 2; // Linhas defensivas
             return game.battlefield.gridToCanvas(gridCol, gridRow);
         }
         
@@ -202,7 +203,7 @@ class AI {
         
         // Converter para grid e ajustar posição defensiva
         const gridPos = game.battlefield.canvasToGrid(mostAdvanced.x, mostAdvanced.y);
-        const defensiveRow = Math.max(0, gridPos.row - 2);
+        const defensiveRow = Math.max(2, Math.min(Math.floor(game.battlefield.gridRows / 2) - 2, gridPos.row - 2));
         const defensiveCol = Math.max(0, Math.min(game.battlefield.gridCols - 1, 
             gridPos.col + Math.floor((Math.random() - 0.5) * 4)));
         
@@ -229,10 +230,14 @@ class AI {
         };
     }    getAttackPosition() {
         // Escolher lane baseada no grid system (lanes esquerda e direita)
-        // Posicionar na área da IA (parte superior do campo)
+        // Posicionar na área da IA de forma simétrica ao jogador
+        const centerCol = Math.floor(game.battlefield.gridCols / 2);
+        const leftCol = Math.floor(game.battlefield.gridCols / 4);
+        const rightCol = Math.floor((game.battlefield.gridCols * 3) / 4);
+        
         const lanes = [
-            { col: 4, row: 6 },   // Lane esquerda (mais na frente)
-            { col: 13, row: 6 }   // Lane direita (mais na frente)
+            { col: leftCol, row: Math.floor(game.battlefield.gridRows / 2) - 4 },   // Lane esquerda
+            { col: rightCol, row: Math.floor(game.battlefield.gridRows / 2) - 4 }   // Lane direita
         ];
         
         const lane = lanes[Math.floor(Math.random() * lanes.length)];
@@ -240,7 +245,8 @@ class AI {
         // Adicionar variação na posição, mas manter na área da IA
         const finalCol = Math.max(0, Math.min(game.battlefield.gridCols - 1, 
             lane.col + Math.floor((Math.random() - 0.5) * 3)));
-        const finalRow = Math.max(2, Math.min(10, // Manter na metade superior
+        const maxAttackRow = Math.floor(game.battlefield.gridRows / 2) - 2;
+        const finalRow = Math.max(2, Math.min(maxAttackRow, 
             lane.row + Math.floor((Math.random() - 0.5) * 2)));
         
         return game.battlefield.gridToCanvas(finalCol, finalRow);
@@ -285,19 +291,32 @@ class AI {
                 card,
                 x: pos.x,
                 y: pos.y
-            };
-        } else {
-            // Colocar unidade em posição aleatória na área da IA
+            };        } else {
+            // Colocar unidade em posição aleatória na área da IA (simétrica ao jogador)
             const gridCol = Math.floor(Math.random() * game.battlefield.gridCols);
-            const gridRow = Math.floor(Math.random() * 8) + 2; // Área da IA
+            const aiAreaHeight = Math.floor(game.battlefield.gridRows / 2) - 2; // Simétrico ao jogador
+            const gridRow = Math.floor(Math.random() * aiAreaHeight) + 2; // Área da IA (linhas 2 até meio-2)
             const pos = game.battlefield.gridToCanvas(gridCol, gridRow);
             
-            return {
-                type: 'place_unit',
-                card,
-                x: pos.x,
-                y: pos.y
-            };
+            // Verificar se é posição válida para IA
+            if (game.battlefield.isValidAIPlacement(pos.x, pos.y)) {
+                return {
+                    type: 'place_unit',
+                    card,
+                    x: pos.x,
+                    y: pos.y
+                };
+            } else {
+                // Fallback para posição segura na área da IA
+                const safeRow = Math.floor(game.battlefield.gridRows / 4);
+                const safePos = game.battlefield.gridToCanvas(gridCol, safeRow);
+                return {
+                    type: 'place_unit',
+                    card,
+                    x: safePos.x,
+                    y: safePos.y
+                };
+            }
         }
     }
 

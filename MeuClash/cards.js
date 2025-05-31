@@ -69,64 +69,68 @@ class Unit {
 
         return true;
     }    followPath(deltaTime) {
-        // Obter o caminho mais próximo do battlefield
-        if (game.battlefield) {
-            const path = game.battlefield.getNearestPath(this.x, this.y);
-            
-            if (path && path.length > 0) {
-                // Para unidades inimigas, seguir do início para o fim do caminho
-                // Para unidades do jogador, seguir do fim para o início
-                let targetPoint = null;
-                
-                if (this.player === 'enemy') {
-                    // Unidades inimigas: encontrar o próximo ponto à frente no caminho
-                    for (let i = 0; i < path.length; i++) {
-                        const point = path[i];
-                        const distanceToPoint = this.getDistanceTo(point);
-                        
-                        // Se está próximo o suficiente de um ponto, ir para o próximo
-                        if (distanceToPoint < 30 && i < path.length - 1) {
-                            targetPoint = path[i + 1];
-                            break;
-                        } else if (distanceToPoint >= 30) {
-                            targetPoint = point;
-                            break;
-                        }
-                    }
-                    
-                    // Se não encontrou um ponto ou chegou ao final, ir para o último ponto
-                    if (!targetPoint) {
-                        targetPoint = path[path.length - 1];
-                    }
-                } else {
-                    // Unidades do jogador: seguir caminho invertido (do fim para o início)
-                    for (let i = path.length - 1; i >= 0; i--) {
-                        const point = path[i];
-                        const distanceToPoint = this.getDistanceTo(point);
-                        
-                        if (distanceToPoint < 30 && i > 0) {
-                            targetPoint = path[i - 1];
-                            break;
-                        } else if (distanceToPoint >= 30) {
-                            targetPoint = point;
-                            break;
-                        }
-                    }
-                    
-                    if (!targetPoint) {
-                        targetPoint = path[0];
-                    }
-                }
-                
-                if (targetPoint) {
-                    this.moveTowards(targetPoint, deltaTime);
-                }
-            }
-        } else {
+        if (!game.battlefield) {
             // Fallback para movimento básico se o battlefield não estiver disponível
             const targetY = this.player === 'player' ? 100 : 500;
             this.moveTowards({x: 400, y: targetY}, deltaTime);
+            return;
         }
+
+        // Determinar alvo final baseado no jogador
+        const finalTarget = this.player === 'player' ? 
+            { x: 400, y: 100 } :  // Unidades do jogador vão para o topo
+            { x: 400, y: 500 };   // Unidades inimigas vão para baixo
+
+        // Para unidades voadoras (minions), movimento direto
+        if (this.card.type === 'minions') {
+            this.moveTowards(finalTarget, deltaTime);
+            return;
+        }
+
+        // Para unidades terrestres, verificar se precisa usar ponte
+        const needsBridge = this.needsBridgeToReachTarget(finalTarget);
+        
+        if (needsBridge) {
+            // Se precisa da ponte, ir primeiro para a ponte
+            const bridgeTarget = this.findPathToBridge(finalTarget);
+            if (bridgeTarget) {
+                const distanceToBridge = this.getDistanceTo(bridgeTarget);
+                
+                // Se está próximo da ponte, pode continuar para o alvo final
+                if (distanceToBridge < 40) {
+                    this.moveTowards(finalTarget, deltaTime);
+                } else {
+                    // Ainda precisa chegar na ponte
+                    this.moveTowards(bridgeTarget, deltaTime);
+                }
+            } else {
+                // Se não encontrou caminho para ponte, ficar parado
+                this.moving = false;
+            }
+        } else {
+            // Pode ir direto para o alvo
+            this.moveTowards(finalTarget, deltaTime);
+        }
+    }    // Verificar se a unidade precisa usar ponte para chegar ao alvo
+    needsBridgeToReachTarget(target) {
+        if (!game.battlefield) return false;
+        
+        // Unidades voadoras nunca precisam de ponte
+        if (this.card.type === 'minions') return false;
+        
+        const currentSide = this.y < game.battlefield.canvas.height / 2 ? 'top' : 'bottom';
+        const targetSide = target.y < game.battlefield.canvas.height / 2 ? 'top' : 'bottom';
+        
+        // Se estão em lados diferentes, precisa da ponte
+        if (currentSide !== targetSide) {
+            // Verificar se já está numa ponte
+            if (game.battlefield.isOnBridge(this.x, this.y)) {
+                return false; // Já está na ponte, pode continuar
+            }
+            return true;
+        }
+        
+        return false;
     }
 
     findTarget(units, towers) {
@@ -166,21 +170,70 @@ class Unit {
         const dx = this.x - target.x;
         const dy = this.y - target.y;
         return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    moveTowards(target, deltaTime) {
+    }    moveTowards(target, deltaTime) {
         const dx = target.x - this.x;
         const dy = target.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance > 5) {
             const speed = this.card.speed * deltaTime / 1000;
-            this.x += (dx / distance) * speed;
-            this.y += (dy / distance) * speed;
+            let newX = this.x + (dx / distance) * speed;
+            let newY = this.y + (dy / distance) * speed;
+
+            // Verificar se unidades terrestres podem se mover para a nova posição
+            if (this.card.type !== 'minions' && game.battlefield) {
+                // Para unidades terrestres, verificar se podem estar na nova posição
+                if (!game.battlefield.canUnitBeAt(newX, newY)) {
+                    // Se não pode ir direto, tentar encontrar caminho através da ponte
+                    const bridgePath = this.findPathToBridge(target);
+                    if (bridgePath) {
+                        const bridgeTarget = bridgePath;
+                        const bridgeDx = bridgeTarget.x - this.x;
+                        const bridgeDy = bridgeTarget.y - this.y;
+                        const bridgeDistance = Math.sqrt(bridgeDx * bridgeDx + bridgeDy * bridgeDy);
+                        
+                        if (bridgeDistance > 5) {
+                            newX = this.x + (bridgeDx / bridgeDistance) * speed;
+                            newY = this.y + (bridgeDy / bridgeDistance) * speed;
+                        }
+                    } else {
+                        // Se não encontrou caminho pela ponte, não se mover
+                        this.moving = false;
+                        return;
+                    }
+                }
+            }
+
+            this.x = newX;
+            this.y = newY;
             this.moving = true;
         } else {
             this.moving = false;
         }
+    }    // Encontrar caminho para a ponte mais próxima quando precisa atravessar o rio
+    findPathToBridge(finalTarget) {
+        if (!game.battlefield) return null;
+
+        // Verificar se precisa atravessar o rio para chegar ao alvo
+        const currentSide = this.y < game.battlefield.canvas.height / 2 ? 'top' : 'bottom';
+        const targetSide = finalTarget.y < game.battlefield.canvas.height / 2 ? 'top' : 'bottom';
+
+        // Se estão no mesmo lado, não precisa da ponte
+        if (currentSide === targetSide) return null;
+
+        // Coordenadas das pontes (usando mesma lógica do drawBridges)
+        const leftBridgeX = game.battlefield.getGridPosition(game.battlefield.gridCols / 4, 0).x;
+        const rightBridgeX = game.battlefield.getGridPosition((game.battlefield.gridCols * 3) / 4, 0).x;
+        const riverY = game.battlefield.canvas.height / 2;
+        
+        const leftBridge = { x: leftBridgeX, y: riverY };
+        const rightBridge = { x: rightBridgeX, y: riverY };
+
+        // Calcular qual ponte é mais próxima
+        const distToLeftBridge = this.getDistanceTo(leftBridge);
+        const distToRightBridge = this.getDistanceTo(rightBridge);
+
+        return distToLeftBridge < distToRightBridge ? leftBridge : rightBridge;
     }
 
     attack() {
@@ -261,8 +314,7 @@ class Unit {
         ctx.lineWidth = 1;
         ctx.strokeText(this.card.icon, this.x, this.y);
         ctx.fillText(this.card.icon, this.x, this.y);
-        
-        // Mostrar valor de vida em pequeno texto
+          // Mostrar valor de vida em pequeno texto
         if (game.battlefield && game.battlefield.debugMode) {
             ctx.fillStyle = 'white';
             ctx.font = '10px Arial';
@@ -271,6 +323,12 @@ class Unit {
             const healthText = `${this.hp}/${this.maxHp}`;
             ctx.strokeText(healthText, this.x, this.y + this.size + 15);
             ctx.fillText(healthText, this.x, this.y + this.size + 15);
+            
+            // Mostrar informações de pathfinding
+            const side = this.y < game.battlefield.canvas.height / 2 ? 'TOP' : 'BOT';
+            const onBridge = game.battlefield.isOnBridge(this.x, this.y) ? ' [PONTE]' : '';
+            const pathInfo = `${side}${onBridge}`;
+            ctx.fillText(pathInfo, this.x, this.y + this.size + 25);
         }
     }
 

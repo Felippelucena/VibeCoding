@@ -683,25 +683,45 @@ class Battlefield {
         return y > this.canvas.height / 2;
     }
 
+    // Verificar se uma posição está na área válida para a IA
+    isValidAIPlacement(x, y) {
+        // IA só pode colocar na metade superior (área da IA)
+        return y < this.canvas.height / 2;
+    }
+
+    // Verificar se uma posição está no rio (área bloqueada)
+    isInRiver(x, y) {
+        const riverY = this.canvas.height / 2;
+        const riverHeight = this.gridHeight;
+        return Math.abs(y - riverY) < riverHeight / 2;
+    }
+
+    // Verificar se uma posição está numa ponte
+    isOnBridge(x, y) {
+        if (!this.isInRiver(x, y)) return false;
+        
+        const leftBridgeX = this.getGridPosition(Math.floor(this.gridCols / 4), 0).x;
+        const rightBridgeX = this.getGridPosition(Math.floor((this.gridCols * 3) / 4), 0).x;
+        const bridgeWidth = this.gridWidth * 3;
+        
+        return (Math.abs(x - leftBridgeX) < bridgeWidth / 2) || 
+               (Math.abs(x - rightBridgeX) < bridgeWidth / 2);
+    }
+
+    // Verificar se uma criatura pode estar nesta posição (não pode atravessar rio diretamente)
+    canUnitBeAt(x, y) {
+        if (this.isInRiver(x, y)) {
+            return this.isOnBridge(x, y);
+        }
+        return true;
+    }
+
     // Ajustar posição para o centro da célula do grid mais próxima
     snapToGrid(x, y) {
         const col = Math.floor(x / this.gridWidth);
         const row = Math.floor(y / this.gridHeight);
         return this.getGridPosition(col, row);
-    }
-
-    // Obter o caminho mais próximo para uma posição
-    getNearestPath(x, y) {
-        const leftPathStart = this.leftPath[0];
-        const rightPathStart = this.rightPath[0];
-        
-        const distToLeft = Math.sqrt(Math.pow(x - leftPathStart.x, 2) + Math.pow(y - leftPathStart.y, 2));
-        const distToRight = Math.sqrt(Math.pow(x - rightPathStart.x, 2) + Math.pow(y - rightPathStart.y, 2));
-        
-        return distToLeft < distToRight ? this.leftPath : this.rightPath;
-    }
-
-    // Função de teste para verificar caminhos
+    }    // Função de teste para verificar caminhos
     testPaths() {
         console.log('🛤️ Testando sistema de caminhos...');
         console.log(`Grid: ${this.gridCols}x${this.gridRows}`);
